@@ -1,0 +1,102 @@
+service: weather-events-api
+
+params:
+  default:
+    awsRegion: eu-west-1 # change this to whichever region you want to deploy to
+    apiBasePath: weather
+
+provider:
+  name: aws
+  region: ${param:awsRegion}
+  stage: weather
+  stackName: ${self:service}
+
+resources:
+  Resources:
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: "${self:provider.stackName}-cognito-user-pool"
+        UsernameAttributes:
+          - email
+        UsernameConfiguration:
+          CaseSensitive: false
+
+    # Resource Servers give the ability for a UserPoolClient to apply scopes to the access token.
+    # The defined scopes are added to the Cognito User Pool so that a UserPoolClient has access to them.
+    # Generates the following scopes: weather/post, weather/get
+    UserPoolResourceServer:
+      Type: AWS::Cognito::UserPoolResourceServer
+      Properties:
+        UserPoolId: !Ref CognitoUserPool
+        Name: "Weather API Resource Server"
+        Identifier: "weather-api"
+        Scopes:
+          - ScopeName: "post"
+            ScopeDescription: "Create weather events"
+          - ScopeName: "get"
+            ScopeDescription: "Retrieve weather events"
+          - ScopeName: "delete"
+            ScopeDescription: "Delete a weather event"
+
+    # The OAuth 2.0 enabled Cognito Client
+    CognitoUserPoolServiceClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        UserPoolId: !Ref CognitoUserPool
+        GenerateSecret: true # Required if we want to utilise OAuth 2.0 flows
+        AllowedOAuthFlows:
+          - client_credentials
+        AllowedOAuthFlowsUserPoolClient: true
+        AccessTokenValidity: 60
+        TokenValidityUnits:
+          AccessToken: minutes
+        ExplicitAuthFlows: []
+        AllowedOAuthScopes:
+          # Select the scopes from the UserPool to make available to the User/Machine-User via the access token.
+          - "weather-api/post"
+          - "weather-api/get"
+      DependsOn:
+        - UserPoolResourceServer
+
+    # Required in order to make requests to Cognito domain /oauth2/token endpoint for getting access_token.
+    # example output - https://weather-events-api-0a3f614a459d.auth.eu-west-1.amazoncognito.com
+    UserPoolDomain:
+      Type: AWS::Cognito::UserPoolDomain
+      Properties:
+        Domain:
+          Fn::Join:
+            - "-"
+            - - ${self:provider.stackName}
+              - Fn::Select:
+                  - 4
+                  - Fn::Split:
+                      - "-"
+                      - Fn::Select:
+                          - 2
+                          - Fn::Split:
+                              - /
+                              - Ref: AWS::StackId
+        UserPoolId: !Ref CognitoUserPool
+
+    WeatherEventsRestApi:
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        # Pull in the openapi specification which defines the API.
+        Body: ${file(./openapi.spec.yml)}
+        Parameters:
+          endpointConfigurationTypes: REGIONAL
+      DependsOn:
+        - CognitoUserPool
+    ApiGatewayDeployment:
+      Type: AWS::ApiGateway::Deployment
+      Properties:
+        RestApiId: !Ref WeatherEventsRestApi
+    ApiGatewayStage:
+      Type: AWS::ApiGateway::Stage
+      Properties:
+        RestApiId: !Ref WeatherEventsRestApi
+        StageName: ${param:apiBasePath}
+        DeploymentId: !Ref ApiGatewayDeployment
+        MethodSettings:
+          - ResourcePath: "/"

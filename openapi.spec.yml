@@ -1,0 +1,75 @@
+openapi: 3.0.0
+info:
+  title: Weather Events REST API
+  version: 1.0.0
+paths:
+  /:
+    post:
+      operationId: add_weather
+      tags:
+        - Weather
+      security:
+        - CognitoAuthorizer:
+            - "weather-api/post"
+      responses:
+        "200":
+          description: 200 response
+          headers:
+            "Content-Type":
+              type: string
+      x-amazon-apigateway-integration:
+        type: mock
+        httpMethod: POST
+        requestTemplates:
+          "application/json": "{\n    \"statusCode\":  200\n}"
+        responses:
+          default:
+            statusCode: 200
+            responseParameters:
+              "method.response.header.Content-Type": "'application/json'"
+            responseTemplates:
+              "application/json": '{"message": "success"}'
+        passthroughBehavior: when_no_match
+    get:
+      operationId: list_weather
+      tags:
+        - Weather
+      security:
+        - CognitoAuthorizer:
+            - "weather-api/get"
+      responses:
+        "200":
+          description: 200 response
+          headers:
+            "Content-Type":
+              type: string
+      x-amazon-apigateway-integration:
+        type: mock
+        httpMethod: GET
+        requestTemplates:
+          "application/json": "{\n    \"statusCode\":  200\n}"
+        responses:
+          default:
+            statusCode: 200
+            responseParameters:
+              "method.response.header.Content-Type": "'application/json'"
+            responseTemplates:
+              "application/json": '{"events": [
+                {"name": "Storms Dudley, Eunice and Franklin", "dateStart": "2022-02-16", "dateEnd": "2022-02-21" },
+                {"name": "Storms Malik and Corrie", "dateStart": "2022-01-29", "dateEnd": "2022-01-31" }
+              ]}'
+        passthroughBehavior: when_no_match
+
+components:
+  securitySchemes:
+    CognitoAuthorizer:
+      type: apiKey
+      name: Authorization
+      in: header
+      x-amazon-apigateway-authtype: "cognito_user_pools"
+      x-amazon-apigateway-authorizer:
+        providerARNs:
+          - Fn::GetAtt:
+              - CognitoUserPool
+              - Arn
+        type: "cognito_user_pools"

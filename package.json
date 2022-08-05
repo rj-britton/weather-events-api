@@ -1,0 +1,10 @@
+{
+  "name": "weather-events-api",
+  "version": "1.0.0",
+  "private": true,
+  "author": "robert j. britton",
+  "license": "MIT",
+  "dependencies": {
+    "serverless": "^3.19.0"
+  }
+}
