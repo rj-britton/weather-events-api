@@ -13,7 +13,7 @@ A RestApi for retrieving and updating lists of weather events.
 ## Deploying the Cloudformation Stack with Serverless Framework
 
 ```bash
-yarn serverless deploy
+yarn && yarn serverless deploy
 ```
 
 ## Destroying the Cloudformation Stack with Serverless Framework
