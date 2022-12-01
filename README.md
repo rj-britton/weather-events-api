@@ -1,3 +1,5 @@
+Complementary codebase for my blog post [Securing AWS API Gateway with Cognito Authorizer and OAuth 2.0](https://veygoeng.medium.com/securing-aws-api-gateway-with-cognito-authorizer-and-oauth-2-0-241326d84856)
+
 # Weather API
 
 A RestApi for retrieving and updating lists of weather events.
